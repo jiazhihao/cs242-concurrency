@@ -52,9 +52,13 @@ wait m = do
 notify :: Monitor -> IO ()
 notify m = do
     list <- takeMVar (monitorCond m)
-    putMVar (monitorCond m) (tail list)
-    putMVar (head list) ()
-    return ()
+    if (null list) then do
+        putMVar (monitorCond m) []
+        return ()
+    else do
+        putMVar (monitorCond m) (tail list)
+        putMVar (head list) ()
+        return ()
 
 ---------------------------------------------------------------------
 -- Example code:
@@ -83,6 +87,12 @@ newAccount = do
 
 makeAccountWithPendingWithdrawal = do
     a <- newAccount
+    forkIO $ do
+        withdraw a 20
+        putStrLn "Withdrawal approved"
+    return a
+
+drawFrom a = do
     forkIO $ do
         withdraw a 20
         putStrLn "Withdrawal approved"
