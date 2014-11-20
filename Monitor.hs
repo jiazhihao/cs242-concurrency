@@ -10,26 +10,49 @@ data Monitor = Monitor
 
 -- | Repeatedly tests @b@ and runs @doit@ if false.
 whileM :: IO Bool -> IO () -> IO ()
-whileM cond body = undefined
+whileM cond body = do
+    cond_val <- cond
+    if (cond_val)
+        then do
+            body
+            whileM cond body
+        else return ()
 
 -- | Create a new monitor object, which contains the lock as
 -- well as the queue of condition variables threads are waiting on.
 newMonitor :: IO Monitor
-newMonitor = undefined
+newMonitor = do
+    lock <- newMVar ()
+    cond <- newMVar []
+    return Monitor{ monitorLock = lock, monitorCond = cond}
+    
 
 -- | Runs a computation within a monitor.
 synchronized :: Monitor -> IO a -> IO a
-synchronized m doit = undefined
+synchronized m doit = do
+    -- takeMVar (monitorLock m)
+    ret <- doit
+    -- putMVar (monitorLock m) ()
+    return ret
 
 -- | Inside a 'synchronized' block, releases the lock and waits
 -- to be notified
 wait :: Monitor -> IO ()
-wait m = undefined
+wait m = do
+    list <- takeMVar (monitorCond m)
+    newMVar <- newEmptyMVar
+    putMVar (monitorCond m) (list ++ [newMVar])
+    takeMVar newMVar
+    return ()
 
 -- | Notifies the monitor that some conditions may have become true,
 -- and wakes up one process.
 notify :: Monitor -> IO ()
-notify m = undefined
+notify m = do
+    list <- takeMVar (monitorCond m)
+    putMVar (monitorCond m) (tail list)
+    putMVar (head list) ()
+    return ()
 
 ---------------------------------------------------------------------
 -- Example code:
