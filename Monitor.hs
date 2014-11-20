@@ -30,9 +30,9 @@ newMonitor = do
 -- | Runs a computation within a monitor.
 synchronized :: Monitor -> IO a -> IO a
 synchronized m doit = do
-    -- takeMVar (monitorLock m)
+    takeMVar (monitorLock m)
     ret <- doit
-    -- putMVar (monitorLock m) ()
+    putMVar (monitorLock m) ()
     return ret
 
 -- | Inside a 'synchronized' block, releases the lock and waits
@@ -42,7 +42,9 @@ wait m = do
     list <- takeMVar (monitorCond m)
     newMVar <- newEmptyMVar
     putMVar (monitorCond m) (list ++ [newMVar])
+    putMVar (monitorLock m) ()
     takeMVar newMVar
+    takeMVar (monitorLock m)
     return ()
 
 -- | Notifies the monitor that some conditions may have become true,
